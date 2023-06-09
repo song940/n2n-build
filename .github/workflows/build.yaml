@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+      - name: Compile
+        run: |
+          git clone --depth 1 https://github.com/ntop/n2n -b 3.0 /tmp/n2n
+          cd /tmp/n2n
+          ./autogen.sh
+          ./configure
+          make
+          mkdir -p ${{ github.workspace }}/artifact
+          cp /tmp/n2n/supernode ${{ github.workspace }}/artifact/n2n-supernode-x86_64
+          cp /tmp/n2n/edge ${{ github.workspace }}/artifact/n2n-edge-x86_64
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: "3.0.0"
+          path: ${{ github.workspace }}/artifact/*
+      - name: Upload to release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACTION_GITHUB_TOKEN }}
+        with:
+          name: "3.0.0"
+          tag_name: "3.0.0"
+          files: ${{ github.workspace }}/artifact/*
